@@ -3,13 +3,18 @@ import pandas as pd
 import numpy as np
 import math
 
+# dataset about location of Chinese 33 cities
 data = pd.read_csv('chinacity_33.csv')
 dt = np.array(data)
 Lat = np.array(data.iloc[:, 2]).tolist()
 Long = np.array(data.iloc[:, 1]).tolist()
 
+# dataset about travelling cost between Chinese 33 cities
+data1 = pd.read_csv('moneycost_china33.csv')
+dt1 = np.array(data1)
 
-def evolutionaryAlg(cities):
+
+def ea_distance(cities):
     num_cities = len(cities)
     init_list = list(cities)
     POPULATION_SIZE = (num_cities - 1) * (num_cities - 2)
@@ -17,8 +22,8 @@ def evolutionaryAlg(cities):
         POPULATION_SIZE = 100
     OFFSPRING_SIZE = round(POPULATION_SIZE / 2)
     TOURNAMENT_SIZE = 2
-    mr = 0.5
-    iteration = 0
+    mr = 0.25
+    iteration = 1
     max_iter = 1500
 
     # generate initial population
@@ -26,85 +31,150 @@ def evolutionaryAlg(cities):
     d0 = [0] * POPULATION_SIZE
     for i in range(len(p0)):
         individual = list(init_list)
-        # print('individual : ',individual)
         temp = individual[1:]
-        # print('temp1 : ',temp)
         random.shuffle(temp)
-        # print('temp2 : ',temp)
         individual[1:] = temp
-        # print('individual2 : ',individual)
         p0[i] = list(individual)
-        # print('item: ',p0[i])
         d0[i] = geoDistance(individual)
-    # print('p0:', p0)
-    # print('d0:', d0)
 
     # find minimum
     idx_sorted = sorted(range(len(d0)), key=lambda k: d0[k])
-    # print('idx_sorted:', idx_sorted)
-    # print('d0:', d0)
     best_idx = idx_sorted[0]
 
     # best route
     best_route = p0[best_idx]
     best_distance = d0[best_idx]
-    # print('best_route:', best_route)
-    # print('best_distance:', best_distance)
+
+    print('iteration', iteration, '-----------Distance:', best_distance, '-----------Route:', best_route)
 
     while iteration < max_iter:
         iteration += 1
         p_t = p0
         d_t = d0
-        # print('length of population__:',len(p_t))
-        # print('new iteration begin')
+
+        # count for the number of offspring
         no_offspring = 0
         while no_offspring != OFFSPRING_SIZE:
-            # print('selection begin')
             # selection
             [p1, p2] = selection(list(p0), list(d0), POPULATION_SIZE, TOURNAMENT_SIZE)
-            # print('selection done')
-            # variation
-            [c1, c2] = crossover(list(p1), list(p2))
-            # print('crossover done')
-            # print('child:', child)
-            c1 = mutation(list(c1), mr)
+            # breeding
+            [c1, c2] = crossover_cx(list(p1), list(p2))
+            # mutation
+            c1 = mutation_inversion(list(c1), mr)
+            # evaluation
             d1 = geoDistance(c1)
+            # adding the child into new population
             p_t.append(c1)
             d_t.append(d1)
             no_offspring += 1
-            # print('no_offspring:',no_offspring)
-            # print('size of generation:',len(p_t))
-
             if no_offspring == OFFSPRING_SIZE:
                 break
             else:
-                c2 = mutation(list(c2), mr)
+                c2 = mutation_inversion(list(c2), mr)
                 d2 = geoDistance(c2)
                 p_t.append(c2)
                 d_t.append(d2)
                 no_offspring += 1
+        # Elitism
         [p_t, d_t] = sort_population(p_t, d_t)
-        # print('p_t_sorted:', p_t)
-        # print('p_t_sorted:', d_t)
-        # print('lenth:', len(d_t))
         iter_best_route = p_t[0]
         iter_best_distance = d_t[0]
         if iter_best_distance < best_distance:
             best_distance = iter_best_distance
             best_route = iter_best_route
-        print('iteration', iteration, ':', best_distance, '-----------', best_route)
+        print('iteration', iteration, '-----------Distance:', best_distance, '-----------Route:', best_route)
+
         # reproduction
         p0 = p_t[:POPULATION_SIZE]
         d0 = d_t[:POPULATION_SIZE]
-        # print('new_P_T:', p0)
-        # print('new_D_T:', d0)
-        # print('lenth:', len(d0))
+        # if all individuals in population are same, then terminate iteration
         if checkEqual(d0):
-            print('early stop.')
+            # print('early stop.')
             break
 
     return best_distance, best_route
 
+def ea_cost(cities):
+    num_cities = len(cities)
+    init_list = list(cities)
+    POPULATION_SIZE = (num_cities - 1) * (num_cities - 2)
+    if num_cities > 11:
+        POPULATION_SIZE = 100
+    OFFSPRING_SIZE = round(POPULATION_SIZE / 2)
+    TOURNAMENT_SIZE = 2
+    mr = 0.25
+    iteration = 1
+    max_iter = 1500
+
+    # generate initial population
+    p0 = [1] * POPULATION_SIZE
+    m0 = [0] * POPULATION_SIZE
+    for i in range(len(p0)):
+        individual = list(init_list)
+        temp = individual[1:]
+        random.shuffle(temp)
+        individual[1:] = temp
+        p0[i] = list(individual)
+        m0[i] = moneyCost(individual)
+
+    # find minimum
+    idx_sorted = sorted(range(len(m0)), key=lambda k: m0[k])
+    best_idx = idx_sorted[0]
+
+    # best route
+    best_route = p0[best_idx]
+    best_moneycost = m0[best_idx]
+
+    print('iteration', iteration, '-----------Cost:', best_moneycost, '-----------Route:', best_route)
+
+    while iteration < max_iter:
+        iteration += 1
+        p_t = p0
+        m_t = m0
+
+        # count for the number of offspring
+        no_offspring = 0
+        while no_offspring != OFFSPRING_SIZE:
+            # selection
+            [p1, p2] = selection(list(p0), list(m0), POPULATION_SIZE, TOURNAMENT_SIZE)
+            # breeding
+            [c1, c2] = crossover_cx(list(p1), list(p2))
+            # mutation
+            c1 = mutation_inversion(list(c1), mr)
+            # evaluation
+            m1 = moneyCost(c1)
+            # adding the child into new population
+            p_t.append(c1)
+            m_t.append(m1)
+            no_offspring += 1
+            if no_offspring == OFFSPRING_SIZE:
+                break
+            else:
+                c2 = mutation_inversion(list(c2), mr)
+                m2 = moneyCost(c2)
+                p_t.append(c2)
+                m_t.append(m2)
+                no_offspring += 1
+        # Elitism
+        [p_t, m_t] = sort_population(p_t, m_t)
+        iter_best_route = p_t[0]
+        iter_best_moneycost = m_t[0]
+        if iter_best_moneycost < best_moneycost:
+            best_moneycost = iter_best_moneycost
+            best_route = iter_best_route
+        print('iteration', iteration, '-----------Cost:', best_moneycost, '-----------Route:', best_route)
+
+        # reproduction
+        p0 = p_t[:POPULATION_SIZE]
+        m0 = m_t[:POPULATION_SIZE]
+        # if all individuals in population are same, then terminate iteration
+        if checkEqual(m0):
+            # print('early stop.')
+            break
+
+    return best_moneycost, best_route
+
+# https://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
 def checkEqual(l):
     return len(set(l)) <= 1
 
@@ -137,33 +207,23 @@ def selection(p0, d0, POPULATION_SIZE, TOURNAMENT_SIZE):
     candidates = [1] * TOURNAMENT_SIZE
     f = [1] * TOURNAMENT_SIZE
     parents = [1] * 2
-    # print(' selection begin1')
     for j in range(2):
-        # print('for j',j)
         for i in range(TOURNAMENT_SIZE):
-            # print('for i ',i)
             rand = random.randint(0, (POPULATION_SIZE - 1))
             candidates[i] = p[rand]
-            # print('candidates ',i,':',candidates[i])
             f[i] = d[rand]
-            # print('f ',i,':',f[i])
         idx = f.index(min(f))
         parents[j] = candidates[idx]
-        # print('parents ',j,':',parents)
     count = 0
     while parents[0] == parents[1]:
-        # print('while')
-        # print('p:',p)
         for i in range(TOURNAMENT_SIZE):
             rand = random.randint(0, (POPULATION_SIZE - 1))
-            # print('rand:',rand)
             candidates[i] = p[rand]
-            # print('candidates ',i,':',candidates[i])
             f[i] = d[rand]
-            # print('f ', i, ':', f[i])
         idx = f.index(min(f))
         parents[1] = candidates[idx]
-        # print('parents new',parents[1])
+
+        # if repeat tournament too much time, then break
         count += 1
         if count == 100:
             break
@@ -173,7 +233,109 @@ def selection(p0, d0, POPULATION_SIZE, TOURNAMENT_SIZE):
     return p1, p2
 
 
-def crossover(p1, p2):
+def crossover_pmx(p1, p2):
+    num_cities = len(p1)
+    c1 = [0] * num_cities
+    c2 = [0] * num_cities
+    a = random.randint(1, num_cities)
+    b = random.randint(1, num_cities)
+    while a == b:
+        b = random.randint(1, num_cities)
+    if a < b:
+        cutpoint_a = a
+        cutpoint_b = b
+    else:
+        cutpoint_a = b
+        cutpoint_b = a
+
+    c1[0] = p1[0]
+    c2[0] = p2[0]
+    c1[cutpoint_a:cutpoint_b] = p2[cutpoint_a:cutpoint_b]
+    c2[cutpoint_a:cutpoint_b] = p1[cutpoint_a:cutpoint_b]
+    for i in range(1, num_cities):
+        if p1[i] not in c1 and c1[i] == 0:
+            c1[i] = p1[i]
+        if p2[i] not in c2 and c2[i] == 0:
+            c2[i] = p2[i]
+    if 0 in c1:
+        for i in range(1, num_cities):
+            if c1[i] == 0:
+                shouldbe_value = p1[i]
+                idx = p2.index(shouldbe_value)
+                mapping_value = p1[idx]
+                while mapping_value in c1:
+                    shouldbe_value = mapping_value
+                    idx = p2.index(shouldbe_value)
+                    mapping_value = p1[idx]
+                c1[i] = mapping_value
+    if 0 in c2:
+        for i in range(1, num_cities):
+            if c2[i] == 0:
+                shouldbe_value = p2[i]
+                idx = p1.index(shouldbe_value)
+                mapping_value = p2[idx]
+                while mapping_value in c2:
+                    shouldbe_value = mapping_value
+                    idx = p1.index(shouldbe_value)
+                    mapping_value = p2[idx]
+                c2[i] = mapping_value
+    return c1, c2
+
+
+def crossover_ox(p1, p2):
+    num_cities = len(p1)
+    c1 = [0] * num_cities
+    c2 = [0] * num_cities
+    c1_tempA = []
+    c1_tempB = []
+    c2_tempA = []
+    c2_tempB = []
+
+    a = random.randint(1, num_cities)
+    b = random.randint(1, num_cities)
+    while a == b:
+        b = random.randint(1, num_cities)
+    if a < b:
+        startPoint = a
+        endPoint = b
+    else:
+        startPoint = b
+        endPoint = a
+
+
+    for i in range(startPoint, endPoint):
+        c1_tempA.append(p1[i])
+        c2_tempA.append(p2[i])
+
+    for i in range(endPoint, num_cities):
+        c1_tempB.append(p2[i])
+        c2_tempB.append(p1[i])
+    for i in range(1, endPoint):
+        c1_tempB.append(p2[i])
+        c2_tempB.append(p1[i])
+    for item in c1_tempA:
+        if item in c1_tempB:
+            c1_tempB.remove(item)
+
+    for item in c2_tempA:
+        if item in c2_tempB:
+            c2_tempB.remove(item)
+
+    c1[startPoint:endPoint] = c1_tempA[:]
+    c2[startPoint:endPoint] = c2_tempA[:]
+
+    tail = num_cities - endPoint
+    c1[endPoint:num_cities] = c1_tempB[0:tail]
+    c2[endPoint:num_cities] = c2_tempB[0:tail]
+    c1[1:startPoint] = c1_tempB[tail:]
+    c2[1:startPoint] = c2_tempB[tail:]
+
+    c1[0] = p1[0]
+    c2[0] = p2[0]
+    return c1, c2
+
+
+def crossover_cx(p1, p2):
     num_cities = len(p1)
     c1 = [0] * num_cities
     c2 = [0] * num_cities
@@ -192,13 +354,13 @@ def crossover(p1, p2):
         idx1 = p1.index(value1)
         c1[idx1] = value1
         mapping_value1 = p2[idx1]
-    # print('c1:', c1)
 
     if 0 in c1:
         for i in range(1, num_cities):
             if c1[i] == 0:
                 c1[i] = p2[i]
 
+    # c2
     value2 = p1[1]
     idx2 = p2.index(value2)
     c2[idx2] = value2
@@ -213,10 +375,47 @@ def crossover(p1, p2):
         for i in range(1, num_cities):
             if c2[i] == 0:
                 c2[i] = p1[i]
-    return c1,c2
+    return c1, c2
 
 
-def mutation(individual, mr):
+def mutation_inversion(individual, mr):
+    num_cities = len(individual)
+    c = list(individual)
+    if mr > random.random():
+        a = random.randint(1, num_cities)
+        b = random.randint(1, num_cities)
+        while a == b:
+            b = random.randint(1, num_cities)
+        if a < b:
+            gen_a = a
+            gen_b = b
+        else:
+            gen_a = b
+            gen_b = a
+        c_temp = c[gen_a:gen_b]
+        c_temp = list(reversed(c_temp))
+        c[gen_a:gen_b] = c_temp[:]
+    return c
+
+
+def mutation_scramble(individual, mr):
+    num_cities = len(individual)
+    c = list(individual)
+    temp = []
+    for i in range(1, num_cities):
+        if mr > random.random():
+            temp.append(c[i])
+            c[i] = 0
+    random.shuffle(temp)
+    if 0 in c:
+        for i in range(1, num_cities):
+            if c[i] == 0:
+                c[i] = temp[0]
+                temp.remove(temp[0])
+    return c
+
+
+def mutation_swap(individual, mr):
     num_cities = len(individual)
     c = list(individual)
     for i in range(1, num_cities):
@@ -227,11 +426,12 @@ def mutation(individual, mr):
             c[idx] = temp
     return c
 
+# https://blog.csdn.net/yl2isoft/article/details/16367901
 def rad(d):
     PI = math.pi
     return d * PI / 180
 
-
+# https://blog.csdn.net/yl2isoft/article/details/16367901
 def geoDistance(solution):
     l = list(solution)
     num_cities = len(l)
@@ -266,9 +466,20 @@ def geoDistance(solution):
     d = round(d)
     return d
 
-
-# x4 = [3, 2, 4, 5]
-# x2 = [2, 3, 7, 9, 10, 26]
-# x3 = [2, 7, 3, 26, 9, 10]
-# x1 = [2, 3, 4, 7, 8, 10, 22, 25, 29, 31]
-# evolutionaryAlg(x1)
+def moneyCost(solution):
+    l = list(solution)
+    lenth_solution = len(l)
+    total_cost = 0
+    # departure =  city_code -1 ，destination = city_code
+    for i in range(lenth_solution):
+        if i != (lenth_solution - 1):
+            departure = l[i]
+            destination = l[i + 1]
+            cost = dt1[departure - 1][destination]
+            total_cost += cost
+        else:
+            departure = l[i]
+            destination = l[0]
+            cost = dt1[departure - 1][destination]
+            total_cost += cost
+    return total_cost

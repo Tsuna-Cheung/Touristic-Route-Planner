@@ -20,7 +20,7 @@ def evolutionaryAlg(cities):
     if num_cities > 11:
         POPULATION_SIZE = 100
     OFFSPRING_SIZE = round(POPULATION_SIZE / 2)
-    mr = 0.5
+    mr = 0.25
     iteration = 0
     max_iter = 1500
 
@@ -30,15 +30,10 @@ def evolutionaryAlg(cities):
     m0 = [0] * POPULATION_SIZE
     for i in range(POPULATION_SIZE):
         individual = list(init_list)
-        # print('individual : ',individual)
         temp = individual[1:]
-        # print('temp1 : ',temp)
         random.shuffle(temp)
-        # print('temp2 : ',temp)
         individual[1:] = temp
-        # print('individual2 : ',individual)
         p0[i] = list(individual)
-        # print('item: ',p0[i])
         d0[i] = geoDistance(individual)
         m0[i] = moneyCost(individual)
 
@@ -53,32 +48,39 @@ def evolutionaryAlg(cities):
         print('m0:', m0)
         # domniated sorting for selection
         [Fa, Fb, rank] = non_domninated_sorting(p0, d0, m0)
-        # print('Fa:', Fa)
-        # print('Fb:', Fb)
-        # print('rank:', rank)
         cd = []
         # last front is empty list
         for i in range(len(Fa) - 1):
             cd_front = crowding_distance(d0, m0, Fa[i])
             cd.append(cd_front)
-        # print('cd:', cd)
 
-        for i in range(OFFSPRING_SIZE):
+        no_offspring = 0
+        while no_offspring != OFFSPRING_SIZE:
+            # selection
             [p1, p2] = selection(p0, rank, Fa, cd, POPULATION_SIZE)
-            child = crossover(p1, p2)
-            child = mutation(child, mr)
-            d = geoDistance(child)
-            m = moneyCost(child)
-            p0.append(child)
-            d0.append(d)
-            m0.append(m)
-        # print('p0:', p0)
-        # print('d0:', d0)
-        # print('m0:', m0)
+            # breeding
+            [c1, c2] = crossover_ox(list(p1), list(p2))
+            # mutation
+            c1 = mutation_inversion(list(c1), mr)
+            # evaluation
+            m1 = moneyCost(c1)
+            d1 = geoDistance(c1)
+            # adding the child into new population
+            p0.append(c1)
+            m0.append(m1)
+            d0.append(d1)
+            no_offspring += 1
+            if no_offspring == OFFSPRING_SIZE:
+                break
+            else:
+                c2 = mutation_inversion(list(c2), mr)
+                m2 = moneyCost(c2)
+                d2 = geoDistance(c2)
+                p0.append(c2)
+                m0.append(m2)
+                d0.append(d2)
+                no_offspring += 1
         [F1, F2, rank1] = non_domninated_sorting(p0, d0, m0)
-        # print('F1:', F1)
-        # print('F2:', F2)
-        # print('rank1:', rank1)
         idx = 0
         p_t = []
         d_t = []
@@ -90,34 +92,24 @@ def evolutionaryAlg(cities):
             m_temp = adding_to_list(m0, F1[idx])
             m_t = m_t + m_temp
             idx += 1
-            # print('p_t:', p_t)
-            # print('d_t:', d_t)
-            # print('m_t:', m_t)
         remain_len = POPULATION_SIZE - len(p_t)
-        # print('remain_len:', remain_len)
         if remain_len > 0:
             cd_last_front = crowding_distance(d0, m0, F1[idx])
-            # print('last front:',F1[idx])
-            # print('cd_last_front:',cd_last_front)
             last_front_sorted = sort_front_by_crowding_distance(F1[idx], cd_last_front)
-            # print('last_front_sorted:',last_front_sorted)
             for i in range(remain_len):
                 p_t.append(p0[last_front_sorted[i]])
                 d_t.append(d0[last_front_sorted[i]])
                 m_t.append(m0[last_front_sorted[i]])
-            # print('p_t:', p_t)
-            # print('d_t:', d_t)
-            # print('m_t:', m_t)
         p0 = p_t
         d0 = d_t
         m0 = m_t
         best_solution = p0[0]
         best_moneycost = m0[0]
         best_distance = d0[0]
-        print('best solution is:', best_solution, '--------------distance:', best_distance, '------------cost:', best_moneycost,'---------------')
-        print('p0:', p0)
-        print('d0:', d0)
-        print('m0:', m0)
+        # print('best solution is:', best_solution, '--------------distance:', best_distance, '------------cost:', best_moneycost,'---------------')
+        # print('p0:', p0)
+        # print('d0:', d0)
+        # print('m0:', m0)
         if checkEqual(m0) or checkEqual(d0):
             print('early stop.')
             break
@@ -125,7 +117,7 @@ def evolutionaryAlg(cities):
 
     return best_solution,best_distance,best_moneycost
 
-
+# https://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
 def checkEqual(l):
     return len(set(l)) <= 1
 
@@ -145,10 +137,10 @@ def non_domninated_sorting(population, distance, moneyCost):
     d = list(distance)
     m = list(moneyCost)
     population_size = len(p)
-    # i 支配的个体集合
+    # the set dominated by i
     s1 = [[] for _ in range(population_size)]
     s2 = [[] for _ in range(population_size)]
-    # i 被支配的个体数
+    # number of individual that dominate i
     n = [0] * population_size
     rank = [0] * population_size
 
@@ -157,7 +149,7 @@ def non_domninated_sorting(population, distance, moneyCost):
     F1 = [[]]
     # chromosome of front
     F2 = [[]]
-
+    # https://blog.csdn.net/joekepler/article/details/80820240
     for i in range(population_size):
         for j in range(population_size):
             dom_less = 0
@@ -177,10 +169,6 @@ def non_domninated_sorting(population, distance, moneyCost):
                     dom_equal += 1
                 elif m[i] > m[j]:
                     dom_more += 1
-                # print(i,'-------',j)
-                # print('less',dom_less)
-                # print('equal',dom_equal)
-                # print('more',dom_more)
                 # i dominites j
                 if dom_more == 0 and dom_equal != 2:
                     if j not in s1[i]:
@@ -189,10 +177,6 @@ def non_domninated_sorting(population, distance, moneyCost):
                 # j dominites i
                 if dom_less == 0 and dom_equal != 2:
                     n[i] += 1
-
-        # print('s1',s1)
-        # print('s2',s2)
-        # print('n',n)
 
         if n[i] == 0:
             if i not in F1[front]:
@@ -216,26 +200,24 @@ def non_domninated_sorting(population, distance, moneyCost):
 
     return F1, F2, rank
 
-
+# https://github.com/haris989/NSGA-II/blob/master/NSGA%20II.py
 def crowding_distance(distance, moneyCost, F):
     lenth_front = len(F)
-    # print('lenth of f', lenth_front)
     cd = [0] * lenth_front
     d = list(distance)
     m = list(moneyCost)
     f = list(F)
+    # if the number of individual in the front less than 3, then set both crowding distance to infinity
     if lenth_front < 3:
         for i in range(lenth_front):
             cd[i] = float('inf')
-        # print('break')
         return cd
 
     f_sorted_by_d = sort_front(f, d)
     f_sorted_by_m = sort_front(f, m)
-    # print('f_sorted_by_d:', f_sorted_by_d)
-    # print('f_sorted_by_m:', f_sorted_by_m)
-    cd[0] = 4444444444444444
-    cd[lenth_front - 1] = 4444444444444444
+    # infinite large number
+    cd[0] = 666666666666666
+    cd[lenth_front - 1] = 666666666666666
     for i in range(1, lenth_front - 1):
         cd[i] = cd[i] + (d[f_sorted_by_d[i + 1]] - d[f_sorted_by_d[i - 1]]) / (max(d) - min(d))
     for i in range(1, lenth_front - 1):
@@ -250,8 +232,6 @@ def sort_front(front, objective):
     f_v = [0] * f_size
     for i in range(f_size):
         f_v[i] = v[f[i]]
-    # print('f_v1:',f_v)
-    # print('f1:',f)
 
     for j in range(f_size):
         swapped = 0
@@ -260,11 +240,8 @@ def sort_front(front, objective):
                 f = swap(f, i, i - 1)
                 f_v = swap(f_v, i, i - 1)
                 swapped = 1
-                # print('swap')
         if swapped == 0:
             break
-    # print('f_v2:',f_v)
-    # print('f2:',f)
     return f
 
 
@@ -280,11 +257,8 @@ def sort_front_by_crowding_distance(front, crowding_distance):
                 f = swap(f, i, i - 1)
                 cd = swap(cd, i, i - 1)
                 swapped = 1
-                # print('swap')
         if swapped == 0:
             break
-    # print('f_v2:',f_v)
-    # print('f2:',f)
     return f
 
 
@@ -306,7 +280,6 @@ def selection(p0, rank, Fr, crowding_distance, POPULATION_SIZE):
         rand_b = random.randint(0, (POPULATION_SIZE - 1))
         while rand_a == rand_b:
             rand_b = random.randint(0, (POPULATION_SIZE - 1))
-            # print('while')
         if r[rand_a] < r[rand_b]:
             parents[i] = p[rand_a]
 
@@ -315,43 +288,86 @@ def selection(p0, rank, Fr, crowding_distance, POPULATION_SIZE):
 
         elif r[rand_a] == r[rand_b]:
             front = r[rand_a]
-            # print('front:',front)
             idx1 = get_index_from_front(rand_a, f[front])
-            # print('idx1:',idx1)
             idx2 = get_index_from_front(rand_b, f[front])
-            # print('idx2:',idx2)
             if cd[front][idx1] >= cd[front][idx2]:
                 parents[i] = p[rand_a]
             else:
                 parents[i] = p[rand_b]
-        # print('parent', i, ':', parents[i])
-    # print('parents:', parents)
     p1 = parents[0]
     p2 = parents[1]
     return p1, p2
 
 
 def get_index_from_front(idx, front):
-    # print('index:',idx)
-    # print('the front:',front)
     for i in range(len(front)):
         if front[i] == idx:
             return i
 
 
-def crossover(p1, p2):
+def crossover_pmx(p1, p2):
+    num_cities = len(p1)
+    c1 = [0] * num_cities
+    c2 = [0] * num_cities
+    a = random.randint(1, num_cities)
+    b = random.randint(1, num_cities)
+    while a == b:
+        b = random.randint(1, num_cities)
+    if a < b:
+        cutpoint_a = a
+        cutpoint_b = b
+    else:
+        cutpoint_a = b
+        cutpoint_b = a
+
+    c1[0] = p1[0]
+    c2[0] = p2[0]
+    c1[cutpoint_a:cutpoint_b] = p2[cutpoint_a:cutpoint_b]
+    c2[cutpoint_a:cutpoint_b] = p1[cutpoint_a:cutpoint_b]
+    for i in range(1, num_cities):
+        if p1[i] not in c1 and c1[i] == 0:
+            c1[i] = p1[i]
+        if p2[i] not in c2 and c2[i] == 0:
+            c2[i] = p2[i]
+    if 0 in c1:
+        for i in range(1, num_cities):
+            if c1[i] == 0:
+                shouldbe_value = p1[i]
+                idx = p2.index(shouldbe_value)
+                mapping_value = p1[idx]
+                while mapping_value in c1:
+                    shouldbe_value = mapping_value
+                    idx = p2.index(shouldbe_value)
+                    mapping_value = p1[idx]
+                c1[i] = mapping_value
+    if 0 in c2:
+        for i in range(1, num_cities):
+            if c2[i] == 0:
+                shouldbe_value = p2[i]
+                idx = p1.index(shouldbe_value)
+                mapping_value = p2[idx]
+                while mapping_value in c2:
+                    shouldbe_value = mapping_value
+                    idx = p1.index(shouldbe_value)
+                    mapping_value = p2[idx]
+                c2[i] = mapping_value
+    return c1, c2
+
+
+def crossover_ox(p1, p2):
     num_cities = len(p1)
     # print(num_cities)
-    c = [1] * num_cities
-    c_tempA = []
-    c_tempB = []
+    c1 = [0] * num_cities
+    c2 = [0] * num_cities
+    c1_tempA = []
+    c1_tempB = []
+    c2_tempA = []
+    c2_tempB = []
 
     a = random.randint(1, num_cities)
     b = random.randint(1, num_cities)
     while a == b:
         b = random.randint(1, num_cities)
-    # print('a: ',a)
-    # print('b: ',b)
     if a < b:
         startPoint = a
         endPoint = b
@@ -359,54 +375,139 @@ def crossover(p1, p2):
         startPoint = b
         endPoint = a
 
-    # print('start Point: ', startPoint)
-    # print('end Point: ', endPoint)
-
     for i in range(startPoint, endPoint):
-        c_tempA.append(p1[i])
+        c1_tempA.append(p1[i])
+        c2_tempA.append(p2[i])
 
-    # print('c_tempA: ', c_tempA)
     for i in range(endPoint, num_cities):
-        c_tempB.append(p2[i])
-    # print('c_tempB_1: ', c_tempB)
-    for i in range(1, endPoint):
-        c_tempB.append(p2[i])
-    # print('c_tempB_2: ', c_tempB)
-    for item in c_tempA:
-        if item in c_tempB:
-            c_tempB.remove(item)
-    # print('c_tempB_3: ', c_tempB)
+        c1_tempB.append(p2[i])
+        c2_tempB.append(p1[i])
 
-    c[startPoint:endPoint] = c_tempA[:]
-    # print('c1: ', c)
+    for i in range(1, endPoint):
+        c1_tempB.append(p2[i])
+        c2_tempB.append(p1[i])
+
+    for item in c1_tempA:
+        if item in c1_tempB:
+            c1_tempB.remove(item)
+
+    for item in c2_tempA:
+        if item in c2_tempB:
+            c2_tempB.remove(item)
+
+    c1[startPoint:endPoint] = c1_tempA[:]
+    c2[startPoint:endPoint] = c2_tempA[:]
+
     tail = num_cities - endPoint
-    c[endPoint:num_cities] = c_tempB[0:tail]
-    # print('c2: ', c)
-    c[1:startPoint] = c_tempB[tail:]
-    # print('c: ', c)
-    c[0] = p1[0]
+    c1[endPoint:num_cities] = c1_tempB[0:tail]
+    c2[endPoint:num_cities] = c2_tempB[0:tail]
+
+    c1[1:startPoint] = c1_tempB[tail:]
+    c2[1:startPoint] = c2_tempB[tail:]
+
+    c1[0] = p1[0]
+    c2[0] = p2[0]
+    return c1, c2
+
+
+def crossover_cx(p1, p2):
+    num_cities = len(p1)
+    c1 = [0] * num_cities
+    c2 = [0] * num_cities
+    c1[0] = p1[0]
+    c2[0] = p2[0]
+    c1[1] = p1[1]
+    c2[1] = p2[1]
+
+    # c1
+    value1 = p2[1]
+    idx1 = p1.index(value1)
+    c1[idx1] = value1
+    mapping_value1 = p2[idx1]
+    while mapping_value1 not in c1:
+        value1 = mapping_value1
+        idx1 = p1.index(value1)
+        c1[idx1] = value1
+        mapping_value1 = p2[idx1]
+
+    if 0 in c1:
+        for i in range(1, num_cities):
+            if c1[i] == 0:
+                c1[i] = p2[i]
+        # print('c1:', c1)
+
+    # c2
+    value2 = p1[1]
+    idx2 = p2.index(value2)
+    c2[idx2] = value2
+    mapping_value2 = p1[idx2]
+    while mapping_value2 not in c2:
+        value2 = mapping_value2
+        idx2 = p2.index(value2)
+        c2[idx2] = value2
+        mapping_value2 = p1[idx2]
+
+    if 0 in c2:
+        for i in range(1, num_cities):
+            if c2[i] == 0:
+                c2[i] = p1[i]
+    return c1, c2
+
+
+def mutation_inversion(individual, mr):
+    num_cities = len(individual)
+    c = list(individual)
+    if mr > random.random():
+        a = random.randint(1, num_cities)
+        b = random.randint(1, num_cities)
+        while a == b:
+            b = random.randint(1, num_cities)
+        if a < b:
+            gen_a = a
+            gen_b = b
+        else:
+            gen_a = b
+            gen_b = a
+        c_temp = c[gen_a:gen_b]
+        c_temp = list(reversed(c_temp))
+        c[gen_a:gen_b] = c_temp[:]
     return c
 
 
-def mutation(individual, mr):
+def mutation_scramble(individual, mr):
+    num_cities = len(individual)
+    c = list(individual)
+    temp = []
+    for i in range(1, num_cities):
+        if mr > random.random():
+            temp.append(c[i])
+            c[i] = 0
+    random.shuffle(temp)
+    if 0 in c:
+        for i in range(1, num_cities):
+            if c[i] == 0:
+                c[i] = temp[0]
+                temp.remove(temp[0])
+    return c
+
+
+def mutation_swap(individual, mr):
     num_cities = len(individual)
     c = list(individual)
     for i in range(1, num_cities):
         if mr > random.random():
             idx = random.randint(1, (num_cities - 1))
-            # print('idx:', idx)
             temp = c[i]
             c[i] = c[idx]
             c[idx] = temp
-    # print('c2:', c)
     return c
 
-
+# https://blog.csdn.net/yl2isoft/article/details/16367901
 def rad(d):
     PI = math.pi
     return d * PI / 180
 
-
+# https://blog.csdn.net/yl2isoft/article/details/16367901
 def geoDistance(solution):
     l = list(solution)
     num_cities = len(l)
@@ -416,13 +517,9 @@ def geoDistance(solution):
     for i in range(num_cities):
         if i != (num_cities - 1):
             idx1 = l[i] - 1
-            # print('idx1:', idx1)
             idx2 = l[i + 1] - 1
-            # print('idx2:', idx2)
             radLat1 = rad(Lat[idx1])
-            # print('Lat1:', Lat[idx1])
             radLat2 = rad(Lat[idx2])
-            # print('Lat2:', Lat[idx2])
             a = radLat1 - radLat2
             b = rad(Long[idx1]) - rad(Long[idx2])
             s = 2 * math.asin(math.sqrt(
@@ -435,19 +532,15 @@ def geoDistance(solution):
             idx1 = l[i] - 1
             idx2 = l[0] - 1
             radLat1 = rad(Lat[idx1])
-            # print('Lat1:', Lat[idx1])
             radLat2 = rad(Lat[idx2])
-            # print('Lat2:', Lat[idx2])
             a = radLat1 - radLat2
             b = rad(Long[idx1]) - rad(Long[idx2])
             s = 2 * math.asin(math.sqrt(
                 math.pow(math.sin(a / 2), 2) + math.cos(radLat1) * math.cos(radLat2) * math.pow(math.sin(b / 2), 2)))
             s = s * EARTH_RADIUS
             s = round(s * 10000) / 10000
-            # print('s1:', s)
             d += s
     d = round(d)
-    # print('d:', d)
     return d
 
 
@@ -461,20 +554,10 @@ def moneyCost(solution):
             departure = l[i]
             destination = l[i + 1]
             cost = dt1[departure - 1][destination]
-            # print('cost:',cost)
             total_cost += cost
         else:
             departure = l[i]
             destination = l[0]
             cost = dt1[departure - 1][destination]
-            # print('cost1:',cost)
             total_cost += cost
-        # print('total_cost',total_cost)
     return total_cost
-
-
-# x4 = [3, 2, 4, 5]
-# x2 = [2, 3, 7, 9, 10, 26]
-# x3 = [2, 8, 3, 26, 9, 10]
-# x1 = [2, 3, 4, 7, 8, 10, 22, 25,29,31]
-# evolutionaryAlg(x3)

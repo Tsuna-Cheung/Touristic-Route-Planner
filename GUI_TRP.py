@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
+import tkinter.messagebox
 import EA_TRP as ea
-import EA2_TRP as ea2
 import MOEA_TRP as moea
 from PIL import Image, ImageTk
 
@@ -264,7 +264,10 @@ class mainInterface(object):
         for item in self.checkbuttonList:
             if item.get() != 0:
                 results.append(item.get())
-        c1 = getRoute_Interface(results)
+        if len(results) < 4:
+            tkinter.messagebox.showwarning(title='Warning', message='Please select at least 3 cities！')
+        else:
+            new_window = getRoute_Interface(results)
 
     def info_beijing(self):
         self.city_name.config(text='Beijing')
@@ -272,6 +275,7 @@ class mainInterface(object):
         self.image = self.image.resize((440, 315), Image.ANTIALIAS)
         self.im = ImageTk.PhotoImage(self.image)
         self.canvas.create_image(225, 165, image=self.im)
+        # wiki
         self.intro.config(
             text="Beijing is the capital of the People's Republic of China."
                  "With mountains surrounding the inland city on three sides, in addition to the old inner and outer city walls, Beijing was strategically poised and developed to be the residence of the emperor and thus was the perfect location for the imperial capital. The city is renowned for its opulent palaces, temples, parks, gardens, tombs, walls and gates."
@@ -414,6 +418,7 @@ class mainInterface(object):
         self.image = self.image.resize((440, 315), Image.ANTIALIAS)
         self.im = ImageTk.PhotoImage(self.image)
         self.canvas.create_image(225, 165, image=self.im)
+        # china tour.net
         self.intro.config(
             text="Shanghai is China economic center. In the nearly 100 years from the 1870s to 1960s, has been the most prosperous city in the Far East.")
         self.lb.delete(0, 'end')
@@ -427,6 +432,7 @@ class mainInterface(object):
         self.image = self.image.resize((440, 315), Image.ANTIALIAS)
         self.im = ImageTk.PhotoImage(self.image)
         self.canvas.create_image(225, 165, image=self.im)
+        # china tour.net
         self.intro.config(text="Lying on the south bank of the Yangtze River, Nanjing, the capital of Jiangsu Province,"
                                " is one of the most delightful destinations in China. Known as the capital city of six or ten dynasties in ancient Chinese history,"
                                " it has a brilliant cultural heritage.")
@@ -442,6 +448,7 @@ class mainInterface(object):
         self.image = self.image.resize((440, 315), Image.ANTIALIAS)
         self.im = ImageTk.PhotoImage(self.image)
         self.canvas.create_image(225, 165, image=self.im)
+        # china tour.net
         self.intro.config(
             text='Hangzhou has been one of the most renowned and affluent cities of China for the last millennium.'
                  ' A manufacturing hub, industrial city, Hangzhou is immortalized by several renowned poets and artists.'
@@ -458,6 +465,7 @@ class mainInterface(object):
         self.image = self.image.resize((440, 315), Image.ANTIALIAS)
         self.im = ImageTk.PhotoImage(self.image)
         self.canvas.create_image(225, 165, image=self.im)
+        # china tour.net
         self.intro.config(
             text="Lying between the Yangtze River and Huaihe River, Hefei is the capital city of Anhui Province."
                  " Covering an area of 7,266 square kilometers (about 2,805 square miles),"
@@ -579,6 +587,7 @@ class mainInterface(object):
         self.image = self.image.resize((440, 315), Image.ANTIALIAS)
         self.im = ImageTk.PhotoImage(self.image)
         self.canvas.create_image(225, 165, image=self.im)
+        # china tour.net
         self.intro.config(text="Guangzhou is the southern gateway to China in the traditional sense,"
                                " representative of the southern metropolis, also China's gourmet capital."
                                "Guangzhou, also known as Canton,is the capital and most populous city of the province of Guangdong in southern China."
@@ -854,7 +863,7 @@ class getRoute_Interface(object):
 
         # tab1
         self.frame_a = ttk.LabelFrame(self.tab1, text='Plan your tour')
-        self.frame_a.grid(column=0, row=0, padx=8, pady=4)
+        self.frame_a.grid(column=0, row=0, padx=8, pady=4,sticky='w')
         self.l11 = ttk.Label(self.frame_a, text="You've selected:")
         self.l11.grid(column=0, row=0, sticky='W')
         self.top_frame_a = tk.Frame(self.frame_a, width=500, height=70, bg='green')
@@ -875,14 +884,13 @@ class getRoute_Interface(object):
 
         # tab2
         self.frame_b = ttk.LabelFrame(self.tab2, text='Plan your tour')
-        self.frame_b.grid(column=0, row=0, padx=8, pady=4)
+        self.frame_b.grid(column=0, row=0, padx=8, pady=4,sticky='w')
         self.l21 = ttk.Label(self.frame_b, text="You've selected:")
         self.l21.grid(column=0, row=0, sticky='W')
         self.top_frame_b = tk.Frame(self.frame_b, width=500, height=70, bg='green')
         self.top_frame_b.grid(column=0, row=1, padx=8, pady=4)
-        self.l22 = tk.Message(self.frame_b, text='',
+        self.l22 = tk.Message(self.top_frame_b, text='',
                               width=500, bg='#EBEBEB')
-        # self.l12 = ttk.Label(self.monty_a, text="", width=50)
         self.l22.grid(column=0, row=0, sticky='W')
         self.l23 = ttk.Label(self.frame_b, text="Departure:")
         self.l23.grid(column=0, row=2, sticky='W', pady=4)
@@ -894,12 +902,12 @@ class getRoute_Interface(object):
 
         # tab3
         self.frame_c = ttk.LabelFrame(self.tab3, text='Plan your tour')
-        self.frame_c.grid(column=0, row=0, padx=8, pady=4)
+        self.frame_c.grid(column=0, row=0, padx=8, pady=4,sticky='w')
         self.l31 = ttk.Label(self.frame_c, text="You've selected:")
         self.l31.grid(column=0, row=0, sticky='W')
         self.top_frame_c = tk.Frame(self.frame_c, width=500, height=70, bg='green')
         self.top_frame_c.grid(column=0, row=1, padx=8, pady=4)
-        self.l32 = tk.Message(self.frame_c, text='',
+        self.l32 = tk.Message(self.top_frame_c, text='',
                               width=500, bg='#EBEBEB')
         self.print_selection()
         self.l32.grid(column=0, row=0, sticky='W')
@@ -936,7 +944,7 @@ class getRoute_Interface(object):
             temp = self.cl[0]
             self.cl[0] = departure
             self.cl[idx] = temp
-        [best_distance, best_route] = ea.evolutionaryAlg(self.cl)
+        [best_distance, best_route] = ea.ea_distance(self.cl)
         result = str(best_distance) + ' km'
         name_list = []
         for item in best_route:
@@ -957,7 +965,7 @@ class getRoute_Interface(object):
             temp = self.cl[0]
             self.cl[0] = departure
             self.cl[idx] = temp
-        [best_moneycost, best_route] = ea2.evolutionaryAlg(self.cl)
+        [best_moneycost, best_route] = ea.ea_cost(self.cl)
         result = str(best_moneycost) + ' CNY'
         self.monty_b1 = ttk.LabelFrame(self.tab2, text='Recommendation Route')
         self.monty_b1.grid(column=0, row=1, padx=8, pady=20, sticky='W')
@@ -1031,7 +1039,7 @@ class getRoute_Interface(object):
                   'Lhasa', 'Xian', 'Lanzhou', 'Xining', 'Yinchuan', 'Ürümqi']
         for i in range(len(l_city)):
             if name == l_city[i]:
-                print('code:', i + 1)
+                # print('code:', i + 1)
                 return (i + 1)
 
 
